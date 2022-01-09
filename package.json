@@ -1,0 +1,26 @@
+{
+  "name": "@asherfoster/bitburner",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asherfoster/bitburner-scripts.git"
+  },
+  "author": "Asher Foster <me@asherfoster.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/asherfoster/bitburner-scripts/issues"
+  },
+  "homepage": "https://github.com/asherfoster/bitburner-scripts#readme",
+  "devDependencies": {
+    "@asherfoster/eslint-config": "^3.0.0",
+    "esbuild": "^0.14.10",
+    "eslint": "^8.6.0",
+    "typescript": "^4.5.4"
+  }
+}
