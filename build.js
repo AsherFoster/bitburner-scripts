@@ -42,8 +42,7 @@ build({
   target: 'firefox95',
   watch: watch && {
     onRebuild(error, result) {
-      if (error) return console.error('***\n\nwatch build failed:', error);
-      pushToGame(result);
+      if (!error) pushToGame(result);
     }
   }
 }).then(result => pushToGame(result));

@@ -4,7 +4,7 @@ import {getList, getNetwork, shortestPath} from '../network';
 export async function main(ns: NS) {
   const servers = getList(ns, ns.getHostname())
     .map(s => ns.getServer(s))
-    .filter(s => s.hostname != 'home' && !s.purchasedByPlayer);
+    .filter(s => !s.purchasedByPlayer);
 
   for (const server of servers) {
     if (server.hasAdminRights && !server.backdoorInstalled) {

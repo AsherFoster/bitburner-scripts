@@ -2,11 +2,11 @@ import type {NS} from '../NetscriptDefinitions';
 
 // Defines the most a server can increase it's security
 // before we weaken it
-const maxSecurityIncrease = 5;
+const maxSecurityIncrease = 2;
 
 // Once the money available drops below this, grow it again
 // to maximise profits
-const minMoneyFactor = 0.75;
+const minMoneyFactor = 0.8;
 
 export type MinerArgs = [string, number, number];
 
@@ -28,7 +28,7 @@ export async function main(ns: NS) {
     } else {
       // Otherwise, hack it
       const earned = await ns.hack(target);
-      ns.toast(`Hacked $${earned} 💸`);
+      if (earned) ns.toast(`Hacked $${earned.toLocaleString()} 💸`);
     }
   }
 }

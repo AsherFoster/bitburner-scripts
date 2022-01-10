@@ -1,5 +1,5 @@
 import type {NS} from '../NetscriptDefinitions';
-import {allocateTargets} from '../hack';
+import {allocateTargets} from '../allocate/alloc-v1';
 
 export async function main(ns: NS) {
   const tasks = allocateTargets(ns);
