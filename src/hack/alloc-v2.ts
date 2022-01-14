@@ -19,7 +19,7 @@ function executeScheduled(ns: NS, scheduled: ScheduledTask) {
 
 // Gets the memory left on the machine (will "hide" some memory on home)
 function availableMemory(server: Server): number {
-  return Math.max((server.maxRam - server.ramUsed) - (server.hostname === 'home' ? 16 : 0), 0);
+  return Math.max((server.maxRam - server.ramUsed) - (server.hostname === 'home' ? 32 : 0), 0);
 }
 
 function getServersWithAvailableMem(ns: NS): [Server, number][] {
@@ -68,6 +68,22 @@ export function runTask(ns: NS, task: Task) {
   scheduled.forEach(s => executeScheduled(ns, s)); // ensure we've allocated all threads before executing
 }
 
+/**
+ * Returns time it takes to complete a hack on a server, in seconds
+ */
+export function calculateHackingTime(server: Server, hackingLevel: number): number {
+  const difficultyMult = server.requiredHackingSkill * server.hackDifficulty;
+
+  const baseDiff = 500;
+  const baseSkill = 50;
+  const diffFactor = 2.5;
+  let skillFactor = diffFactor * difficultyMult + baseDiff;
+  skillFactor /= hackingLevel + baseSkill;
+
+  const hackTimeMultiplier = 5;
+  return hackTimeMultiplier * skillFactor;
+}
+
 // When allocating the servers, we need to do three things:
 // - Prioritise the servers somehow
 export function prioritiseServers(ns: NS): Record<string, number> {
@@ -76,9 +92,14 @@ export function prioritiseServers(ns: NS): Record<string, number> {
     .map(s => ns.getServer(s))
     .filter(s => !s.purchasedByPlayer && s.requiredHackingSkill <= skill);
 
-  // priority = money / minStrength
+
   const priorities: Record<string, number> = {};
-  targetServers.forEach(server => priorities[server.hostname] = server.moneyMax / server.minDifficulty);
+  targetServers.forEach((server) => {
+    // priority = avg dollars per second per thread
+    // dps = hack chance * hack reward / hack duration
+    priorities[server.hostname] = ns.hackAnalyzeChance(server.hostname) * ns.hackAnalyze(server.hostname) /
+      calculateHackingTime(server, skill)
+  });
   return priorities;
 }
 

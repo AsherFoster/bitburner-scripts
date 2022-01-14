@@ -1,6 +1,6 @@
 import type {NS} from '../NetscriptDefinitions';
 import {getList} from '../network';
-import {MinerBootstrapArgs} from '../entries/miner-bootstrap';
+import {MinerBootstrapArgs} from '../graveyard/miner-bootstrap';
 import {getThreadPool} from './pool';
 
 export interface Task {

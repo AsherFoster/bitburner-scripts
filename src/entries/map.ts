@@ -1,11 +1,13 @@
 import type {NS} from '../NetscriptDefinitions';
 import {getNetwork, shortestPath} from '../network';
+import {runInTerminal} from '../dom';
 
 export async function main(ns: NS) {
   const network = getNetwork(ns, ns.getHostname());
 
   if (ns.args[0]) {
-    ns.tprint('\nconnect ' + shortestPath(network, ns.getHostname(), ns.args[0].toString()).slice(1).join('; connect '));
+    const cmd = '\nconnect ' + shortestPath(network, ns.getHostname(), ns.args[0].toString()).slice(1).join('; connect ');
+    runInTerminal(cmd);
   } else {
     Object.keys(network).forEach((node) => {
       const server = ns.getServer(node);

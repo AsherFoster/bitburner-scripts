@@ -23,5 +23,5 @@ export async function main(ns: NS) {
     await clean(ns, server, shouldTerraform);
   }
 
-  ns.tprint(`Cleaned ${toClean.length} servers`);
+  ns.tprint(`Cleaned${shouldTerraform ? ' and terraformed' : ''} ${toClean.length} servers`);
 }

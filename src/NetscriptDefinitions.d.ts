@@ -2907,7 +2907,7 @@ export interface CodingContract {
    * @param opts - Optional parameters for configuring function behavior.
    * @returns True if the solution was correct, false otherwise. If the returnReward option is configured, then the function will instead return a string. If the contract is successfully solved, the string will contain a description of the contract’s reward. Otherwise, it will be an empty string.
    */
-  attempt(answer: string[] | number, filename: string, host?: string, opts?: CodingAttemptOptions): boolean | string;
+  attempt(answer: string[] | number | number[][], filename: string, host?: string, opts?: CodingAttemptOptions): boolean | string;
 
   /**
    * Get the type of a coding contract.

@@ -1,6 +1,6 @@
 import {NS} from '../NetscriptDefinitions';
 import {getList} from '../network';
-import {actualMinerScript} from '../entries/miner-bootstrap';
+import {actualMinerScript} from '../graveyard/miner-bootstrap';
 
 // - Create a pool of threads
 //   (we can mark each server as having n number of threads, assuming miner.js is going to have a uniform RAM cost)
@@ -17,13 +17,4 @@ export function getThreadPool(ns: NS): Record<string, number> {
   });
 
   return availThreadMap;
-}
-
-export function getMemoryPool(ns: NS): [string, number][] {
-  return getList(ns, 'home')
-    .map(s => ns.getServer(s))
-    .filter(s => s.hasAdminRights)
-    // We're going to make the bold assumption that this server is currently empty. Later on, we might want to handle
-    // what happens if we're scheduling tasks on a server with stuff already running
-    .map(s => ([s.hostname, s.maxRam]));
 }
