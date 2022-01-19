@@ -1,9 +1,18 @@
 import type {NS} from '../NetscriptDefinitions';
-import {getTasks, runTask} from '../hack/alloc-v2';
+import {prepareServer, runBatch} from '../hack/batch';
+import prioritiseServers from '../hack/prioritiseServers';
 
 export async function main(ns: NS) {
-  // start a loop, spawning tasks until we're out of memory
-  const tasks = getTasks(ns);
+  const priorities = prioritiseServers(ns);
+  const target = priorities[0][0]; // throw everything at the optimal server for now
 
-  tasks.forEach(t => runTask(ns, t));
+  await prepareServer(ns, target);
+
+  const batchQueue: Promise<void>[] = [];
+
+  while (true) { // TODO concurrent batches
+    batchQueue.push(runBatch(ns, target));
+
+    await batchQueue.shift();
+  }
 }

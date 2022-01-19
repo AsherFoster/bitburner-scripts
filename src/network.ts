@@ -15,6 +15,7 @@ export function getNetwork(ns: NS, from: string, network: Network = {}): Network
 }
 
 export function getList(ns: NS, start: string): string[] {
+  ns.disableLog('scan');
   return Object.keys(getNetwork(ns, start));
 }
 

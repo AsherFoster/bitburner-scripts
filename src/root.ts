@@ -1,5 +1,37 @@
 import {NS, Server} from './NetscriptDefinitions';
-import {exploits} from './util';
+
+interface Exploit {
+  name: string;
+  use: (ns: NS, s: Server) => void;
+  isUsed: (s: Server) => boolean;
+}
+const exploits: Exploit[] = [
+  {
+    name: 'HTTPWorm.exe',
+    use: (ns, s) => ns.httpworm(s.hostname),
+    isUsed: s => s.httpPortOpen
+  },
+  {
+    name: 'BruteSSH.exe',
+    use: (ns, s) => ns.brutessh(s.hostname),
+    isUsed: s => s.sshPortOpen
+  },
+  {
+    name: 'relaySMTP.exe',
+    use: (ns, s) => ns.relaysmtp(s.hostname),
+    isUsed: s => s.smtpPortOpen
+  },
+  {
+    name: 'SQLInject.exe',
+    use: (ns, s) => ns.sqlinject(s.hostname),
+    isUsed: s => s.sqlPortOpen
+  },
+  {
+    name: 'FTPCrack.exe',
+    use: (ns, s) => ns.ftpcrack(s.hostname),
+    isUsed: s => s.ftpPortOpen
+  }
+];
 
 // So I'm not too sure what's going on, but server.openPortCount and server.*portOpen don't seem to update
 // after opening a port. Instead, this is going to just blindly assume that these functions work

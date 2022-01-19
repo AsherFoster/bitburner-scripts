@@ -4,5 +4,6 @@ export async function main(ns: NS) {
   const target = ns.args[0];
   if (typeof target !== 'string') throw new Error('Target is required');
 
-  await ns.hack(target);
+  const hacked = await ns.hack(target);
+  if (hacked) ns.toast(`Hacked ${hacked.toLocaleString()}`, 'success');
 }

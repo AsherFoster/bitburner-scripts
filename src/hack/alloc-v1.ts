@@ -1,9 +1,8 @@
 import type {NS} from '../NetscriptDefinitions';
 import {getList} from '../network';
-import {MinerBootstrapArgs} from '../graveyard/miner-bootstrap';
-import {getThreadPool} from './pool';
+import {actualMinerScript, MinerBootstrapArgs} from '../graveyard/miner-bootstrap';
 
-export interface Task {
+interface TaskV0 {
   host: string;
   script: string;
   args: (string | number)[];
@@ -11,7 +10,7 @@ export interface Task {
 
 // When allocating the servers, we need to do three things:
 // - Prioritise the servers somehow
-export function prioritiseServers(ns: NS): Record<string, number> {
+function prioritiseServers(ns: NS): Record<string, number> {
   const skill = ns.getHackingLevel();
   const targetServers = getList(ns, 'home')
     .map(s => ns.getServer(s))
@@ -23,8 +22,25 @@ export function prioritiseServers(ns: NS): Record<string, number> {
   return priorities;
 }
 
+// - Create a pool of threads
+//   (we can mark each server as having n number of threads, assuming miner.js is going to have a uniform RAM cost)
+function getThreadPool(ns: NS): Record<string, number> {
+  const minerThreadCost = ns.getScriptRam(actualMinerScript);
+  const hostServers = getList(ns, 'home').map(s => ns.getServer(s)).filter(s => s.hasAdminRights);
+
+  const availThreadMap: Record<string, number> = {};
+
+  hostServers.forEach((server) => {
+    // We're going to make the bold assumption that this server is currently empty. Later on, we might want to handle
+    // what happens if we're scheduling tasks on a server with stuff already running
+    availThreadMap[server.hostname] = Math.floor(server.maxRam / minerThreadCost);
+  });
+
+  return availThreadMap;
+}
+
 // - Allocate the tasks amongst the thread pool according to their priority (do we hack one with everything, divvy them up?)
-export function allocateTargets(ns: NS): Task[] {
+export function allocateTargets(ns: NS): TaskV0[] {
   const priorities = prioritiseServers(ns);
   const threadPool = getThreadPool(ns);
 
