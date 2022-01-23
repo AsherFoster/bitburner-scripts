@@ -1,9 +1,10 @@
 import type {NS} from '../NetscriptDefinitions';
 
 export async function main(ns: NS) {
-  const target = ns.args[0];
-  if (typeof target !== 'string') throw new Error('Target is required');
+  const {hostname} = JSON.parse(ns.args[0] as string);
 
-  const hacked = await ns.hack(target);
+  const hacked = await ns.hack(hostname);
+
+  console.log('hack finished', ns.args[0]);
   if (hacked) ns.toast(`Hacked ${hacked.toLocaleString()}`, 'success');
 }

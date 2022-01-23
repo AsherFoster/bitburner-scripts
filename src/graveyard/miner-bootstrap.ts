@@ -1,5 +1,5 @@
 import type {NS} from '../NetscriptDefinitions';
-import type {MinerArgs} from '../entries/miner';
+import type {MinerArgs} from './miner';
 
 export const actualMinerScript = '/synced/miner.js';
 

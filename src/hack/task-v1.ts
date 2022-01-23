@@ -18,8 +18,7 @@ function executeScheduled(ns: NS, scheduled: ScheduledTask) {
 
 // Gets the memory left on the machine (will "hide" some memory on home)
 function availableMemory(server: Server): number {
-  // return Math.max((server.maxRam - server.ramUsed) - (server.hostname === 'home' ? 32 : 0), 0);
-  return Math.max((server.maxRam - server.ramUsed) - 32, 0);
+  return Math.max((server.maxRam - server.ramUsed) - (server.hostname === 'home' ? 32 : 0), 0);
 }
 
 export function getServersWithAvailableMem(ns: NS): [Server, number][] {
@@ -39,12 +38,14 @@ export function runTask(ns: NS, task: TaskV1) {
   let threadsToSchedule = task.threads;
   const scheduled: ScheduledTask[] = [];
   for (const [server, available] of eligibleHosts) {
-    // ns.tprint(`${available} - ${threadMemory}`);
+    if (threadsToSchedule == 0) break; // We've scheduled all required threads! Yay, we're done
+
     const maxThreadsAvailable = Math.floor(available / threadMemory);
     const toSchedule = Math.min(threadsToSchedule, maxThreadsAvailable);
-    if (toSchedule == 0) {
+
+    if (toSchedule === 0) {
       // This server didn't have enough memory to run any threads - given we're going in descending order, no others will either
-      throw new Error(`Unable to allocate all threads (${threadsToSchedule} remaining)`);
+      break;
     }
 
     scheduled.push({
@@ -53,9 +54,9 @@ export function runTask(ns: NS, task: TaskV1) {
       task
     });
     threadsToSchedule -= toSchedule;
-
-    if (threadsToSchedule == 0) break; // We've scheduled all required threads! Yay, we're done
   }
+
+  if (threadsToSchedule > 0) throw new Error(`Unable to allocate all threads (${threadsToSchedule} remaining of ${task.threads})`);
 
   scheduled.forEach(s => executeScheduled(ns, s)); // ensure we've allocated all threads before executing
 }

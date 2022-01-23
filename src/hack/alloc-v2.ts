@@ -1,6 +1,6 @@
 import type {NS} from '../NetscriptDefinitions';
-import type {MinerArgs} from '../entries/miner';
-import {getServersWithAvailableMem, TaskV1} from './tasks';
+import type {MinerArgs} from '../graveyard/miner';
+import {getServersWithAvailableMem, TaskV1} from './task-v1';
 import prioritiseServers from './prioritiseServers';
 
 function maxThreadsForScript(ns: NS, script: string): number {

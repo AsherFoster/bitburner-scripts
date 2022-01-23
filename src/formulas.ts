@@ -15,6 +15,27 @@ export function weakenTime(ns: NS, server: Server): number {
   // return ns.getWeakenTime(server.hostname);
 }
 
+/** Same as hackTime, except calculated based on the server's minimum difficulty */
+export function optimalHackTime(ns: NS, server: Server): number {
+  return server.minDifficulty * ns.getGrowTime(server.hostname) / (growTimeMultiplier * server.hackDifficulty);
+}
+export function optimalGrowTime(ns: NS, server: Server): number {
+  return optimalHackTime(ns, server) * growTimeMultiplier;
+}
+export function optimalWeakenTime(ns: NS, server: Server): number {
+  return optimalHackTime(ns, server) * weakenTimeMultiplier;
+}
+
+export function optimalHackChance(ns: NS, server: Server): number {
+  const skillMult = 1.75 * ns.getHackingLevel();
+  const skillChance = (skillMult - server.requiredHackingSkill) / skillMult;
+  const difficultyMult = (100 - server.minDifficulty) / 100;
+  const chance =
+    skillChance * difficultyMult; // * player.hacking_chance_mult * calculateIntelligenceBonus(player.intelligence, 1);
+
+  return Math.min(Math.max(chance, 0), 1);
+}
+
 const ServerBaseGrowthRate = 1.03; // Unadjusted Growth rate
 const ServerMaxGrowthRate = 1.0035; // Maximum possible growth rate (max rate accounting for server security)
 
@@ -23,8 +44,27 @@ export const growFortifyAmount = hackFortifyAmount * 2;
 export const weakenFortifyAmount = 0.05;
 
 export function hackPercent(ns: NS, server: Server): number {
-  return ns.hackAnalyze(server.hostname);
+  // Adjust if needed for balancing. This is the divisor for the final calculation
+  const balanceFactor = 240;
+
+  const difficultyMult = (100 - server.hackDifficulty) / 100;
+  const skillMult = (ns.getHackingLevel() - (server.requiredHackingSkill - 1)) / ns.getHackingLevel();
+  const percentMoneyHacked = (1 / balanceFactor) * difficultyMult * skillMult; // * player.hacking_money_mult * BitNodeMultipliers.ScriptHackMoney;
+
+  return Math.min(Math.max(percentMoneyHacked, 0), 1);
 }
+
+export function optimalHackPercent(ns: NS, server: Server): number {
+  // Adjust if needed for balancing. This is the divisor for the final calculation
+  const balanceFactor = 240;
+
+  const difficultyMult = (100 - server.minDifficulty) / 100;
+  const skillMult = (ns.getHackingLevel() - (server.requiredHackingSkill - 1)) / ns.getHackingLevel();
+  const percentMoneyHacked = (1 / balanceFactor) * difficultyMult * skillMult; // * player.hacking_money_mult * BitNodeMultipliers.ScriptHackMoney;
+
+  return Math.min(Math.max(percentMoneyHacked, 0), 1);
+}
+
 export function growPercent(ns: NS, server: Server, threads: number): number {
   const numServerGrowthCycles = Math.max(Math.floor(threads), 0);
 
@@ -57,10 +97,6 @@ export function threadsToGrow(ns: NS, server: Server, percent: number): number {
   // const threadFactor = (server.serverGrowth / 100) * BitNodeMultipliers.ServerGrowthRate * p.hacking_grow_mult * coreBonus;
   const threadFactor = server.serverGrowth / 100;
 
-  // const x = Math.log(percent) / Math.log(growthRate) / threadFactor;
-  // const y = growPercent(ns, server, x);
-  // debugger;
-
   // growthRate ^ (threads * threadFactor) = percent
-  return Math.ceil(Math.log(1 + percent) / Math.log(growthRate) / threadFactor);
+  return Math.ceil(Math.log(1 + percent) / (Math.log(growthRate) * threadFactor));
 }

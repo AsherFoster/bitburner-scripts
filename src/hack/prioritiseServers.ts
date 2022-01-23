@@ -1,7 +1,6 @@
-
 import {NS, Server} from '../NetscriptDefinitions';
 import {getList} from '../network';
-import {hackTime} from '../formulas';
+import {optimalHackChance, optimalHackPercent, optimalHackTime} from '../formulas';
 
 /**
  * Returns a sorted list of servers according to their average cash per second
@@ -20,8 +19,8 @@ function prioritiseServers(ns: NS): [Server, number][] {
     // dps = hack chance * hack reward / hack duration
     return [
       server,
-      ns.hackAnalyzeChance(server.hostname) * server.moneyMax * ns.hackAnalyze(server.hostname) /
-      (hackTime(ns, server) / 1000) // per second
+      optimalHackChance(ns, server) * server.moneyMax * optimalHackPercent(ns, server) /
+      (optimalHackTime(ns, server) / 1000) // per second per thread
     ] as [Server, number];
   });
 

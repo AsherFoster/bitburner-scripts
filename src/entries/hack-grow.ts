@@ -1,8 +1,9 @@
 import type {NS} from '../NetscriptDefinitions';
 
 export async function main(ns: NS) {
-  const target = ns.args[0];
-  if (typeof target !== 'string') throw new Error('Target is required');
+  const {hostname} = JSON.parse(ns.args[0] as string);
 
-  await ns.grow(target);
+  await ns.grow(hostname);
+
+  console.log('grow finished', ns.args[0]);
 }

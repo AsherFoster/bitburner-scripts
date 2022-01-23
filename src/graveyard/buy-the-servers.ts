@@ -1,4 +1,5 @@
 import type {NS} from '../NetscriptDefinitions';
+import {sleep} from '../util';
 
 const purchaseRam = 8;
 const serverNamePrefix = 'pserv-';
@@ -17,6 +18,6 @@ export async function main(ns: NS) {
 
       ns.toast(`Beep boop, purchased a new computer: ${newName}`, 'success');
     }
-    await ns.sleep(2000);
+    await sleep(2000);
   }
 }

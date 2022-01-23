@@ -1,4 +1,4 @@
-// .eslintrc.js
+// .eslintrc.cjs
 // This is a workaround for https://github.com/eslint/eslint/issues/3458
 require('@asherfoster/eslint-config/patch');
 

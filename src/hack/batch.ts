@@ -1,64 +1,47 @@
-import {NS, Server} from '../NetscriptDefinitions';
+import {NS} from '../NetscriptDefinitions';
 import {
   growFortifyAmount,
-  growTime, hackFortifyAmount,
-  hackPercent,
+  growTime,
+  hackFortifyAmount,
   hackTime,
+  optimalHackPercent,
   threadsToGrow,
   weakenFortifyAmount,
   weakenTime
 } from '../formulas';
 import {Task} from './task-v2';
+import {sleep} from '../util';
 
 const HACK_TARGET = 0.8; // Hack 80% of the server's cash
 
-export async function prepareServer(ns: NS, server: Server) {
-  ns.print(`Preparing ${server.hostname} for hack`);
-
-  let amountToWeaken = server.hackDifficulty - server.minDifficulty;
-  const amountToGrow = server.moneyMax - server.moneyAvailable;
-
-  // Run a weaken task
-  // If we're growing, schedule a grow task to finish just before the weaken
-  const weakenDuration = weakenTime(ns, server);
-  const growDuration = growTime(ns, server);
-
-  let growTask: Task | null = null;
-  if (amountToGrow) {
-    // $70 of $100 available
-    // (100 - 70) / 70 = 30 / 70 = % to grow
-    growTask = new Task(
-      ns,
-      'synced/hack-grow.js',
-      [server.hostname],
-      growDuration,
-      threadsToGrow(ns, server, amountToGrow / server.moneyAvailable)
-    );
-
-    amountToWeaken += growFortifyAmount * growTask.threads; // We need to offset the security from the grow too
-  }
-
-  if (amountToWeaken) {
-    const weakenTask = new Task(ns, 'synced/hack-weaken.js', [server.hostname], weakenDuration, Math.ceil(amountToWeaken / weakenFortifyAmount));
-
-    weakenTask.run();
-
-    if (growTask) {
-      // we want this script to finish just before the weaken (which will take significantly longer)
-      await ns.sleep(weakenDuration - growDuration - Task.TimingFudgeDelay);
-      growTask.run();
-    }
-
-    await weakenTask.exit();
-  } else if (growTask) {
-    growTask.run();
-  }
+interface Batch {
+  hackTask: Task<'/synced/hack-hack.js'>;
+  weakenHackTask: Task<'/synced/hack-weaken.js'>;
+  growTask: Task<'/synced/hack-grow.js'>;
+  weakenGrowTask: Task<'/synced/hack-weaken.js'>;
 }
 
-export async function runBatch(ns: NS, server: Server): Promise<void> {
-  const weakenDuration = weakenTime(ns, server);
-  const growDuration = growTime(ns, server);
-  const hackDuration = hackTime(ns, server);
+export function totalThreads(batch: Batch) {
+  const {hackTask, weakenHackTask, growTask, weakenGrowTask} = batch;
+  return hackTask.threads + weakenHackTask.threads + growTask.threads + weakenGrowTask.threads;
+}
+
+export async function runBatch(batch: Batch): Promise<void> {
+  const {hackTask, weakenHackTask, growTask, weakenGrowTask} = batch;
+
+  weakenHackTask.run();
+  await sleep(Task.TimingFudgeDelay * 2);
+  weakenGrowTask.run();
+  await sleep(weakenGrowTask.expectedExecTime - growTask.expectedExecTime - Task.TimingFudgeDelay);
+  growTask.run();
+  await sleep(growTask.expectedExecTime - hackTask.expectedExecTime - Task.TimingFudgeDelay * 2);
+  hackTask.run();
+
+  await weakenGrowTask.exit();
+}
+
+export function createBatch(ns: NS, hostname: string): Batch {
+  const server = ns.getServer(hostname); // reload the server to get the most accurate numbers
 
   /*
 
@@ -72,7 +55,7 @@ export async function runBatch(ns: NS, server: Server): Promise<void> {
 
   RIGHT:
   - threads * perThread = hackPercent
-  - threads = hackPercent / perThread = 0.2 / 0.01
+  - threads = hackPercent / perThread = 0.8 / 0.01
 
   growPercent = amountToGrow / amountLeft = moneyTaken / (moneyAvailable - moneyTaken)
   growThreads = magic(growPercent)
@@ -82,12 +65,11 @@ export async function runBatch(ns: NS, server: Server): Promise<void> {
   growFortify = growThreads * 0.004
   weaken(grow)Threads = growFortify / 0.05
   */
-  const hackPercentPerThread = hackPercent(ns, server);
-  // const hackThreads = Math.ceil(Math.log(HACK_TARGET) / Math.log(1 - hackPercentPerThread));
+  const hackPercentPerThread = optimalHackPercent(ns, server);
   const hackThreads = Math.ceil(HACK_TARGET / hackPercentPerThread); // overshoot the target a lil
-  const moneyTaken = server.moneyAvailable * hackPercentPerThread * hackThreads;
+  const moneyTaken = server.moneyMax * hackPercentPerThread * hackThreads;
 
-  const growPercent = moneyTaken / (server.moneyAvailable - moneyTaken);
+  const growPercent = moneyTaken / (server.moneyMax - moneyTaken);
   const growThreads = threadsToGrow(ns, server, growPercent);
 
   const hackFortify = hackFortifyAmount * hackThreads; // 0.002 * threads
@@ -95,18 +77,19 @@ export async function runBatch(ns: NS, server: Server): Promise<void> {
   const growFortify = growFortifyAmount * growThreads; // 0.004 * threads
   const weakenGrowThreads = Math.ceil(growFortify / weakenFortifyAmount); // increase / 0.05
 
-  const hackTask = new Task(ns, 'synced/hack-hack.js', [server.hostname], hackDuration, hackThreads);
-  const weakenHackTask = new Task(ns, 'synced/hack-weaken.js', [server.hostname], weakenDuration, weakenHackThreads);
-  const growTask = new Task(ns, 'synced/hack-grow.js', [server.hostname], growDuration, growThreads);
-  const weakenGrowTask = new Task(ns, 'synced/hack-weaken.js', [server.hostname], weakenDuration, weakenGrowThreads);
+  const weakenDuration = weakenTime(ns, server);
+  const growDuration = growTime(ns, server);
+  const hackDuration = hackTime(ns, server);
 
-  weakenHackTask.run();
-  await ns.sleep(Task.TimingFudgeDelay * 2);
-  weakenGrowTask.run();
-  await ns.sleep(weakenDuration - growDuration - Task.TimingFudgeDelay);
-  growTask.run();
-  await ns.sleep(growDuration - hackDuration - Task.TimingFudgeDelay * 2);
-  hackTask.run();
+  const hackTask = new Task(ns, '/synced/hack-hack.js', {hostname: server.hostname}, hackDuration, hackThreads);
+  const weakenHackTask = new Task(ns, '/synced/hack-weaken.js', {hostname: server.hostname}, weakenDuration, weakenHackThreads);
+  const growTask = new Task(ns, '/synced/hack-grow.js', {hostname: server.hostname}, growDuration, growThreads);
+  const weakenGrowTask = new Task(ns, '/synced/hack-weaken.js', {hostname: server.hostname}, weakenDuration, weakenGrowThreads);
 
-  await weakenGrowTask.exit();
+  return {
+    hackTask,
+    weakenHackTask,
+    growTask,
+    weakenGrowTask
+  };
 }
